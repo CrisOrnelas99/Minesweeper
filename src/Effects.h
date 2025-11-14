@@ -194,103 +194,99 @@ class Effects {
 };
 
 // circle that expands from a center point
-class RingWaveEffect : public Effect {
+class RingWaveEffect : public Effect
+{
+    private:
+    float startRadius;  //start size
+    float endRadius;    //end size
 
-private:
-    float startRadius{0.f}; // start size
-    float endRadius{0.f};  // end size
-    int framesLived{0};  // frames elapsed
-    int totalFrames{1}; // total frames to live
-    sf::CircleShape ringShape;  // SFML circle shape
+    float lifetime;   // total duration in seconds
+    float elapsed{0}; // time lived so far in seconds
 
-public:
-    RingWaveEffect(sf::Vector2f center, float startRadiusIn, float endRadiusIn, float lifetimeSecondsIn, sf::Color outlineColor)
-        : startRadius(startRadiusIn), endRadius(endRadiusIn),  framesLived(0)
+    sf::CircleShape ringShape;  //sfml circle
+
+    public:
+    RingWaveEffect(sf::Vector2f center, float startRadiusIn, float endRadiusIn,
+                   float lifetimeSecondsIn, sf::Color outlineColor)
+        : startRadius(startRadiusIn), endRadius(endRadiusIn),
+          lifetime(lifetimeSecondsIn <= 0.f ? 0.001f : lifetimeSecondsIn)
     {
-        // convert seconds to frames using 60 fps
-        const int fps = 60;
-        //if time 0 or less, use 1 to work just in case
-        if (lifetimeSecondsIn <= 0.f)
-            totalFrames = 1;
-        else
-        {    //convert seconds to frames and round to nearest integer
-            int f = (int)(lifetimeSecondsIn * fps + 0.5f);
-            totalFrames = (f < 1 ? 1 : f);  //ensure at least 1 frame
-        }
+        ringShape.setFillColor(sf::Color::Transparent); //no fill, only outline
+        ringShape.setOutlineThickness(6.f); //outline thickness
+        ringShape.setOutlineColor(outlineColor);    //outline color
+        ringShape.setPosition(center);  //fixed center position
 
-        ringShape.setFillColor(sf::Color::Transparent); // no fill, only outline
-        ringShape.setOutlineThickness(6.f);  // outline thickness
-        ringShape.setOutlineColor(outlineColor); // outline color
-        ringShape.setPosition(center); // fixed center position
+        // start at initial radius
+        ringShape.setRadius(startRadius);   //apply radius
+        ringShape.setOrigin(startRadius, startRadius);  //keep centered
     }
-        //take one step in every frame
-    bool update(float) override
+
+    // dt = time since last frame in seconds
+    bool update(float dt) override
     {
-        // 0 is started, 1 is end of progress, figure out how far along we are
-        float progress = (totalFrames > 0) ? (float)framesLived / (float)totalFrames : 1.f;
+        elapsed += dt;
+
+        float progress = elapsed / lifetime;
         if (progress < 0.f)
-            progress = 0.f; // force low
+            progress = 0.f; //force low
         if (progress > 1.f)
-            progress = 1.f;  // force high
+            progress = 1.f; //force high
 
-        float radius = startRadius + (endRadius - startRadius) * progress; // grow radius
-        ringShape.setRadius(radius); // apply radius
-        ringShape.setOrigin(sf::Vector2f{ radius, radius }); // keep centered
+        float radius = startRadius + (endRadius - startRadius) * progress;  //grow radius
+        ringShape.setRadius(radius);    //apply radius
+        ringShape.setOrigin(radius, radius);    //keep centered
 
-        if (framesLived < totalFrames)
-            ++framesLived; // advance one frame
-        return framesLived >= totalFrames; // done when we reach total frames
+        // effect is done when we reached
+        return elapsed >= lifetime;
     }
 
     void draw(sf::RenderWindow& window) const override
     {
-        window.draw(ringShape); // show circle outline
+        window.draw(ringShape); //show circle outline
     }
 };
 
+
 // solid color rectangle that covers view
 class ScreenFlashEffect : public Effect
-    {
+{
     private:
-        sf::Color fillColor; // color to fill the screen
-        int framesLived{0}; // frames elapsed
-        int totalFrames{1}; // total frames to live
-    public:
-        ScreenFlashEffect(sf::Color fillColorIn, float lifetimeSecondsIn) // set color and time
-            : fillColor(fillColorIn), framesLived(0)
-        {
-            // convert seconds to frames using 60 fps
-            const int fps = 60;
-            //if time 0 or less, use 1 to work just in case
-            if (lifetimeSecondsIn <= 0.f)
-                totalFrames = 1;
-            else
-            {
-                //convert seconds to frames and round to nearest integer
-                int f = (int)(lifetimeSecondsIn * fps + 0.5f);
-                totalFrames = (f < 1 ? 1 : f);  //ensure at least 1 frame
-            }
-        }
-        //take one step in every frame
-        bool update(float) override
-        {
-            if (framesLived < totalFrames)
-                ++framesLived; // advance one frame
-            return framesLived >= totalFrames; // finished when out of frames
-        }
+    sf::Color fillColor;
 
-        void draw(sf::RenderWindow& window) const override
-        {
-            sf::RectangleShape rect; // simple rectangle
-            sf::Vector2f viewSize   = window.getView().getSize(); // current view size
-            sf::Vector2f viewCenter = window.getView().getCenter(); // current view center
-            rect.setSize(viewSize); // fill the view
-            rect.setOrigin(sf::Vector2f{ viewSize.x * 0.5f, viewSize.y * 0.5f }); // center origin
-            rect.setPosition(viewCenter);  // place at center
-            rect.setFillColor(fillColor); // solid color
-            window.draw(rect); // draw it
-        }
-    };
+    float lifetime;   // total duration in seconds
+    float elapsed{0}; // time lived so far
+
+    public:
+    ScreenFlashEffect(sf::Color fillColorIn, float lifetimeSecondsIn)
+        : fillColor(fillColorIn),
+          lifetime(lifetimeSecondsIn <= 0.f ? 0.001f : lifetimeSecondsIn)
+    {
+    }
+
+    // dt = time since last frame in seconds
+    bool update(float dt) override
+    {
+        elapsed += dt;
+        return elapsed >= lifetime;  // finished when elapsed >= lifetime
+    }
+
+    void draw(sf::RenderWindow& window) const override
+    {
+        sf::RectangleShape rect;    //simple rectangle
+
+        sf::View view = window.getView();   //get current view
+        sf::Vector2f viewSize   = view.getSize(); //current view size
+        sf::Vector2f viewCenter = view.getCenter(); //current view center
+
+        rect.setSize(viewSize); //fill the view
+        rect.setOrigin(viewSize.x * 0.5f, viewSize.y * 0.5f);   //center origin
+        rect.setPosition(viewCenter);   //place at center
+        rect.setFillColor(fillColor);   //solid color
+
+        window.draw(rect);  //draw it
+    }
+};
+
 //play explosion sound when mine found and game end
 class ExplosionSoundEffect : public Effect
 {
