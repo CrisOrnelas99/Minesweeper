@@ -179,17 +179,13 @@ class Effects {
         for (int i = 0; i < (int)effectsList.size(); ++i)
             effectsList[i]->draw(window);
     }
-    //clear all effects from list when new game
-    void clearAll()
-    {   //loop through effects and delete
-        for (int i = 0; i < (int)effectsList.size(); ++i)
-            delete effectsList[i];
-        effectsList.clear();
-    }
         //clean up all effects
     ~Effects()
     {
-        clearAll();
+        //loop through effects and delete
+        for (int i = 0; i < (int)effectsList.size(); ++i)
+            delete effectsList[i];
+        effectsList.clear();
     }
 };
 
@@ -233,7 +229,7 @@ class RingWaveEffect : public Effect
     // time since last frame in seconds
     bool update(float frameTimeSec) override
     {
-        elapsed += dt;
+        elapsed += frameTimeSec;
 
         float progress = elapsed / lifetime;
         if (progress < 0.f)
