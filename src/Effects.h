@@ -208,18 +208,27 @@ class RingWaveEffect : public Effect
     public:
     RingWaveEffect(sf::Vector2f center, float startRadiusIn, float endRadiusIn,
                    float lifetimeSecondsIn, sf::Color outlineColor)
-        : startRadius(startRadiusIn), endRadius(endRadiusIn),
-          lifetime(lifetimeSecondsIn <= 0.f ? 0.001f : lifetimeSecondsIn)
     {
+        // set radii
+        startRadius = startRadiusIn;
+        endRadius   = endRadiusIn;
+
+        // protect against zero
+        if (lifetimeSecondsIn <= 0.f)
+            lifetime = 0.001f;
+        else
+            lifetime = lifetimeSecondsIn;
+
         ringShape.setFillColor(sf::Color::Transparent); //no fill, only outline
-        ringShape.setOutlineThickness(6.f); //outline thickness
-        ringShape.setOutlineColor(outlineColor);    //outline color
-        ringShape.setPosition(center);  //fixed center position
+        ringShape.setOutlineThickness(6.f);             //outline thickness
+        ringShape.setOutlineColor(outlineColor);        //outline color
+        ringShape.setPosition(center);                  //fixed center position
 
         // start at initial radius
-        ringShape.setRadius(startRadius);   //apply radius
+        ringShape.setRadius(startRadius);               //apply radius
         ringShape.setOrigin(startRadius, startRadius);  //keep centered
     }
+
 
     // dt = time since last frame in seconds
     bool update(float dt) override
@@ -258,10 +267,15 @@ class ScreenFlashEffect : public Effect
 
     public:
     ScreenFlashEffect(sf::Color fillColorIn, float lifetimeSecondsIn)
-        : fillColor(fillColorIn),
-          lifetime(lifetimeSecondsIn <= 0.f ? 0.001f : lifetimeSecondsIn)
     {
+        fillColor = fillColorIn;
+
+        if (lifetimeSecondsIn <= 0.f)
+            lifetime = 0.001f;   // avoid zero/negative lifetime
+        else
+            lifetime = lifetimeSecondsIn;
     }
+
 
     // dt = time since last frame in seconds
     bool update(float dt) override
